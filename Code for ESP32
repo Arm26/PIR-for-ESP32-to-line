@@ -1,0 +1,105 @@
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+
+const char* ssid     = "Army2612";
+const char* password = "2612380011";
+
+#define TokenLine "fwMsRkjCfh5nbFWpcgfXpQx4QjMOtj2I8AOVLwfGfsB"
+String txt1 = "มีคนอยู่ในรถ";
+
+int sensorPin = 13; 
+int LED1_PIN = 32;
+int SPK1 = 33;
+int val = 0;
+int in = 17;
+int en = 16;
+
+bool motionState = false;
+
+void setup() 
+{
+pinMode(sensorPin, INPUT);
+pinMode(LED1_PIN, OUTPUT);
+pinMode(SPK1, OUTPUT);
+pinMode(in,OUTPUT);
+pinMode(en,OUTPUT);
+Serial.begin(115200);
+Serial.println();
+Serial.println();
+Serial.print("Connecting to ");
+Serial.println(ssid);
+ 
+WiFi.begin(ssid, password);
+ 
+while (WiFi.status() != WL_CONNECTED) 
+{
+  delay(500);
+  Serial.print(".");
+  }
+  Serial.println("");
+  Serial.println("WiFi connected.");
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+ 
+}
+
+void loop()
+{
+  digitalWrite(in,HIGH);
+  digitalWrite(en,HIGH);
+  val = digitalRead(sensorPin);
+  if (val == HIGH)
+  {
+    digitalWrite(LED1_PIN,HIGH);
+    digitalWrite(SPK1,LOW);
+    NotifyLine(txt1);
+    delay(150);
+
+    if (motionState == false) 
+    {
+      Serial.println("Motion detected!");
+      motionState = true;
+    }
+  }
+  else
+  {
+    digitalWrite(LED1_PIN,LOW);
+    digitalWrite(SPK1,HIGH);
+    delay(150);
+
+    if (motionState == true) 
+    {
+      Serial.println("Motion ended!");
+      motionState = false;
+    }
+  }
+}
+
+void NotifyLine(String t) {
+WiFiClientSecure client;
+if (!client.connect("notify-api.line.me", 443)) {
+Serial.println("Connection failed");
+
+return;
+}
+String req = "";
+req += "POST /api/notify HTTP/1.1\r\n";
+req += "Host: notify-api.line.me\r\n";
+req += "Authorization: Bearer " + String(TokenLine) + "\r\n";
+req += "Cache-Control: no-cache\r\n";
+req += "User-Agent: ESP32\r\n";
+req += "Content-Type: application/x-www-form-urlencoded\r\n";
+req += "Content-Length: " + String(String("message=" + t).length()) + "\r\n";
+req += "\r\n";
+req += "message=" + t;
+Serial.println(req);
+client.print(req);
+delay(20);
+Serial.println("-------------");
+while (client.connected()) {
+String line = client.readStringUntil('\n');
+if (line == "\r") {
+break;
+}
+} //while
+} //loop
